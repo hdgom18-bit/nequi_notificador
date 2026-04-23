@@ -169,7 +169,7 @@ LISTA_SERVICIOS_GRAL = [
     "Servicios Armario - Recargas y Paquetes (operador Tigo)",
     "Servicios Armario - Recargas y Paquetes (operador Claro)", "Vinculación",
     "Descarga App", "Descarga App GT", "Cierre de Cuenta",
-    "Vinculación (Deposito bajo monto)", "Tarjeta Pismo", "Gestión llaves BreB",
+    "Vinculación (Vinculación liviana)", "Tarjeta Pismo", "Gestión llaves BreB",
     "Transacciones SPI BreB", "App Nequi Negocios", "Gestión de la cuenta",
     "Pagos a través de QR Bancolombia a Nequi P2P EMVCO",
     "Pagos a través de QR Datáfono", "Pagos a través de QR Interoperable otros Bancos",
@@ -246,7 +246,7 @@ tipo = st.session_state.lista_tipo
 for t in ["completa", "pse", "spi_breb", "masivo"]:
     if f'num_serv_{t}' not in st.session_state: st.session_state[f'num_serv_{t}'] = 1
     if f'num_av_{t}' not in st.session_state: st.session_state[f'num_av_{t}'] = 1
-    if f'h_ref_ini_{t}' not in st.session_state: st.session_state[f'h_ref_ini_{t}'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+    st.session_state[f'h_ref_ini_{t}'] = datetime.now().strftime("%d/%m/%Y %H:%M")
     if f'h_ref_fin_{t}' not in st.session_state: st.session_state[f'h_ref_fin_{t}'] = ""
     if f'jira_in_{t}' not in st.session_state: st.session_state[f'jira_in_{t}'] = ""
     if f'caso_in_{t}' not in st.session_state: st.session_state[f'caso_in_{t}'] = ""
@@ -286,8 +286,12 @@ if st.sidebar.button("🧹 Limpiar Horas, Jira, Caso y Avances"):
     for i in range(st.session_state[f'num_serv_{tipo}']):
         st.session_state[f"i_{i}_{tipo}"] = ""
         st.session_state[f"f_{i}_{tipo}"] = ""
+        # Resetear estado y afectación a OK
+        st.session_state[f"e_{i}_{tipo}"] = "✅"
     st.session_state[f'jira_in_{tipo}'] = ""
     st.session_state[f'caso_in_{tipo}'] = ""
+    st.session_state[f'h_ref_ini_{tipo}'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+    st.session_state[f'h_ref_fin_{tipo}'] = ""
     if f'comp_in_{tipo}' in st.session_state: st.session_state[f'comp_in_{tipo}'] = ""
     # Limpiar avances
     for i in range(st.session_state.get(f'num_av_{tipo}', 1)):
