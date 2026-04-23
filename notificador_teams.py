@@ -23,7 +23,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 ARCHIVO_LOCAL = "estado_plantillas.json"
 
-_URL_1 = "https://defaultb5e244bdc492495b8b1061bfd453e4.23.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/24f11a0240cb43bf8d71092df7b1126b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hekHKuOhVOITmF6BS9KkGZ0OfzDp5C-D-fEMQKJzsXM"
+_URL_1 = "https://bancolombia.webhook.office.com/webhookb2/e126a021-2786-40af-9af6-6921684d3c4f@b5e244bd-c492-495b-8b10-61bfd453e423/IncomingWebhook/be259da0aa594f47be06abe0e9ca66f9/94d1f457-3cf7-4e68-890f-31aa6d2bc930/V2QBoPL1Y4cVWZuS7g775jzeC9dv_XY-SXLvpjh6UCp9I1"
 _URL_2 = "https://bancolombia.webhook.office.com/webhookb2/e126a021-2786-40af-9af6-6921684d3c4f@b5e244bd-c492-495b-8b10-61bfd453e423/IncomingWebhook/6ff718d420024fe5a6e4a716eacdcd55/94d1f457-3cf7-4e68-890f-31aa6d2bc930/V2_jfe8qFPIqQoNVEkWkI9D-ooJ1-HNCH0lP896k7rcWo1"
 
 # ==============================================================================
@@ -510,15 +510,17 @@ if st.button("🚀 DESPLEGAR NOTIFICACIÓN A TEAMS", type="primary", use_contain
     if st.session_state.get(f'check_sol_{tipo}'):
         mensaje_final += f"\n\n**✅ Solución Final:** {st.session_state.get(f'sol_txt_{tipo}', '')}"
 
-    payload = {"text": mensaje_final}
     for c in canales_sel:
         target = webhook_1 if c == "Canal 1" else webhook_2
         if not target or not target.startswith("http"):
             st.warning(f"⚠️ El webhook de {c} no está configurado.")
             continue
         try:
+            # Canal 1 usa Power Automate (Adaptive Card)
+            # Canal 2 usa webhook clásico de Teams (text)
+            payload = {"text": mensaje_final}
             r = requests.post(target, json=payload, timeout=15)
-            if r.status_code == 200:
+            if r.status_code in [200, 202]:
                 st.success(f"✅ Notificación enviada correctamente a {c}.")
             else:
                 st.error(f"❌ Error en {c}: código {r.status_code}")
