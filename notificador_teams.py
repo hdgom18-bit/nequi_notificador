@@ -6,6 +6,9 @@ import json
 import streamlit as st
 import requests
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+COLOMBIA_TZ = ZoneInfo('America/Bogota')
 from supabase import create_client
 
 ### --- 0. CONFIGURACIÓN DE PÁGINA ---
@@ -50,7 +53,7 @@ def obtener_datos_plantilla(t):
         "servicios": servicios,
         "horas_ini": horas_ini,
         "horas_fin": horas_fin,
-        "updated_at": datetime.now().isoformat()
+        "updated_at": datetime.now(COLOMBIA_TZ).isoformat()
     }
 
 def guardar_en_supabase(t):
@@ -246,7 +249,7 @@ tipo = st.session_state.lista_tipo
 for t in ["completa", "pse", "spi_breb", "masivo"]:
     if f'num_serv_{t}' not in st.session_state: st.session_state[f'num_serv_{t}'] = 1
     if f'num_av_{t}' not in st.session_state: st.session_state[f'num_av_{t}'] = 1
-    st.session_state[f'h_ref_ini_{t}'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+    st.session_state[f'h_ref_ini_{t}'] = datetime.now(COLOMBIA_TZ).strftime("%d/%m/%Y %H:%M")
     if f'h_ref_fin_{t}' not in st.session_state: st.session_state[f'h_ref_fin_{t}'] = ""
     if f'jira_in_{t}' not in st.session_state: st.session_state[f'jira_in_{t}'] = ""
     if f'caso_in_{t}' not in st.session_state: st.session_state[f'caso_in_{t}'] = ""
@@ -275,7 +278,7 @@ if st.sidebar.button("🕒 Aplicar Inicio a Plantilla Actual"):
         st.session_state[f"i_{i}_{tipo}"] = h_ini_in
     st.rerun()
 
-h_fin_in = st.sidebar.text_input("Hora Fin Referencia:", value=st.session_state[f'h_ref_fin_{tipo}'] if st.session_state[f'h_ref_fin_{tipo}'] else datetime.now().strftime("%d/%m/%Y %H:%M"))
+h_fin_in = st.sidebar.text_input("Hora Fin Referencia:", value=st.session_state[f'h_ref_fin_{tipo}'] if st.session_state[f'h_ref_fin_{tipo}'] else datetime.now(COLOMBIA_TZ).strftime("%d/%m/%Y %H:%M"))
 if st.sidebar.button("🕒 Aplicar Fin a Plantilla Actual"):
     st.session_state[f'h_ref_fin_{tipo}'] = h_fin_in
     for i in range(st.session_state[f'num_serv_{tipo}']):
@@ -290,7 +293,7 @@ if st.sidebar.button("🧹 Limpiar Horas, Jira, Caso y Avances"):
         st.session_state[f"e_{i}_{tipo}"] = "✅"
     st.session_state[f'jira_in_{tipo}'] = ""
     st.session_state[f'caso_in_{tipo}'] = ""
-    st.session_state[f'h_ref_ini_{tipo}'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+    st.session_state[f'h_ref_ini_{tipo}'] = datetime.now(COLOMBIA_TZ).strftime("%d/%m/%Y %H:%M")
     st.session_state[f'h_ref_fin_{tipo}'] = ""
     if f'comp_in_{tipo}' in st.session_state: st.session_state[f'comp_in_{tipo}'] = ""
     # Limpiar avances
