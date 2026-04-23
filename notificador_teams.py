@@ -1,0 +1,523 @@
+# Corra el programa: python -m streamlit run notificador_teams.py
+# Dependencias: pip install streamlit requests supabase
+
+import os
+import json
+import streamlit as st
+import requests
+from datetime import datetime
+from supabase import create_client
+
+### --- 0. CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(layout="wide", page_title="Notificador de Incidentes", page_icon="🚨")
+
+# ==============================================================================
+# SUPABASE + WEBHOOKS
+# ==============================================================================
+SUPABASE_URL = "https://btgvgkqbhcvnfnayfuyo.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0Z3Zna3FiaGN2bmZuYXlmdXlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NzkxMjcsImV4cCI6MjA5MjQ1NTEyN30.gQFjjEmvsgNIfhBPW60ArbYOY9CNVEQo9n8G52-pWeM"
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+ARCHIVO_LOCAL = "estado_plantillas.json"
+
+_URL_1 = "https://bancolombia.webhook.office.com/webhookb2/e126a021-2786-40af-9af6-6921684d3c4f@b5e244bd-c492-495b-8b10-61bfd453e423/IncomingWebhook/6ff718d420024fe5a6e4a716eacdcd55/94d1f457-3cf7-4e68-890f-31aa6d2bc930/V2_jfe8qFPIqQoNVEkWkI9D-ooJ1-HNCH0lP896k7rcWo1"
+_URL_2 = "https://bancolombia.webhook.office.com/webhookb2/091d31d5bf254c548ffb41dba34a94e4/3dc687a8-9ce6-4106-bdac-8e2f43fed8c6/V2HHl-u0sIp-3hiZozOHRtoSOkyAnjuUvk1Cr6AALRXgI1"
+
+# ==============================================================================
+# FUNCIONES DE GUARDADO Y CARGA
+# ==============================================================================
+def obtener_datos_plantilla(t):
+    """Recolecta todos los campos de una plantilla desde session_state."""
+    avances = [st.session_state.get(f"av_{i}_{t}", "") for i in range(st.session_state.get(f"num_av_{t}", 1))]
+    num_serv = st.session_state.get(f"num_serv_{t}", 1)
+    estados = [st.session_state.get(f"e_{i}_{t}", "✅") for i in range(num_serv)]
+    servicios = [st.session_state.get(f"s_list_{i}_{t}", "") for i in range(num_serv)]
+    horas_ini = [st.session_state.get(f"i_{i}_{t}", "") for i in range(num_serv)]
+    horas_fin = [st.session_state.get(f"f_{i}_{t}", "") for i in range(num_serv)]
+    return {
+        "tipo": t,
+        "jira": st.session_state.get(f"jira_in_{t}", ""),
+        "caso": st.session_state.get(f"caso_in_{t}", ""),
+        "componente": st.session_state.get(f"comp_in_{t}", ""),
+        "impacto": st.session_state.get(f"imp_in_{t}", ""),
+        "funcionalidades": st.session_state.get(f"fun_in_{t}", ""),
+        "descripcion": st.session_state.get(f"des_in_{t}", ""),
+        "avances": avances,
+        "solucion": st.session_state.get(f"sol_txt_{t}", ""),
+        "check_solucion": st.session_state.get(f"check_sol_{t}", False),
+        "num_serv": num_serv,
+        "estados": estados,
+        "servicios": servicios,
+        "horas_ini": horas_ini,
+        "horas_fin": horas_fin,
+        "updated_at": datetime.now().isoformat()
+    }
+
+def guardar_en_supabase(t):
+    """Guarda o actualiza los datos de una plantilla en Supabase."""
+    try:
+        datos = obtener_datos_plantilla(t)
+        supabase.table("plantillas").upsert(datos, on_conflict="tipo").execute()
+        return True
+    except Exception as e:
+        st.warning(f"⚠️ No se pudo guardar en Supabase: {e}")
+        return False
+
+def guardar_en_json(t):
+    """Guarda los datos de todas las plantillas en un archivo JSON local."""
+    try:
+        estado = {}
+        if os.path.exists(ARCHIVO_LOCAL):
+            with open(ARCHIVO_LOCAL, "r", encoding="utf-8") as f:
+                estado = json.load(f)
+        estado[t] = obtener_datos_plantilla(t)
+        with open(ARCHIVO_LOCAL, "w", encoding="utf-8") as f:
+            json.dump(estado, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        st.warning(f"⚠️ No se pudo guardar localmente: {e}")
+        return False
+
+def cargar_datos_en_session(t, datos):
+    """Carga los datos de una plantilla en session_state."""
+    if not datos:
+        return
+    st.session_state[f"jira_in_{t}"] = datos.get("jira", "")
+    st.session_state[f"caso_in_{t}"] = datos.get("caso", "")
+    st.session_state[f"comp_in_{t}"] = datos.get("componente", "")
+    st.session_state[f"imp_in_{t}"] = datos.get("impacto", "")
+    st.session_state[f"fun_in_{t}"] = datos.get("funcionalidades", "")
+    st.session_state[f"des_in_{t}"] = datos.get("descripcion", "")
+    st.session_state[f"check_sol_{t}"] = datos.get("check_solucion", False)
+    st.session_state[f"sol_txt_{t}"] = datos.get("solucion", "Estabilidad evidenciada...")
+    avances = datos.get("avances", [""])
+    st.session_state[f"num_av_{t}"] = max(1, len(avances))
+    for i, av in enumerate(avances):
+        st.session_state[f"av_{i}_{t}"] = av
+    # Restaurar estados, servicios y horas de la tabla
+    num_serv = datos.get("num_serv", 1)
+    if num_serv > 1:
+        st.session_state[f"num_serv_{t}"] = num_serv
+    estados = datos.get("estados", [])
+    servicios = datos.get("servicios", [])
+    horas_ini = datos.get("horas_ini", [])
+    horas_fin = datos.get("horas_fin", [])
+    for i in range(num_serv):
+        if i < len(estados): st.session_state[f"e_{i}_{t}"] = estados[i]
+        if i < len(servicios): st.session_state[f"s_list_{i}_{t}"] = servicios[i]
+        if i < len(horas_ini): st.session_state[f"i_{i}_{t}"] = horas_ini[i]
+        if i < len(horas_fin): st.session_state[f"f_{i}_{t}"] = horas_fin[i]
+
+def cargar_desde_supabase(t):
+    """Carga datos de Supabase para una plantilla y los mete en session_state."""
+    try:
+        res = supabase.table("plantillas").select("*").eq("tipo", t).execute()
+        if res.data:
+            cargar_datos_en_session(t, res.data[0])
+            return True
+    except Exception:
+        pass
+    return False
+
+def cargar_desde_json(t):
+    """Carga datos del archivo JSON local como respaldo."""
+    try:
+        if os.path.exists(ARCHIVO_LOCAL):
+            with open(ARCHIVO_LOCAL, "r", encoding="utf-8") as f:
+                estado = json.load(f)
+            if t in estado:
+                cargar_datos_en_session(t, estado[t])
+                return True
+    except Exception:
+        pass
+    return False
+
+# ==============================================================================
+# CONSTANTES
+# ==============================================================================
+FUNCIONALIDADES_BASE = (
+    "Ingreso APP Nequi, Consulta de Saldo, Envio Bancolombia a Nequi, "
+    "Envio Nequi a Bancolombia, Envio Nequi a Nequi, Envio a otros Bancos, "
+    "Generación de OTP Retiros, Retiros Cajeros, Envio Bre-B, Recepcion Bre-B, "
+    "Tarjeta Física, Tarjeta Digital, Recargas CB Bancolombia, Retiros CB Bancolombia, "
+    "Recargas CB Nequi, Retiros CB Nequi, Pagos PSE, Recargas PSE, Apis, "
+    "Pagos de Creditos, Pay Pal, Remesas, "
+    "Servicios Armario - Recargas y Paquetes (operador Tigo), "
+    "Servicios Armario - Recargas y Paquetes (operador Claro), Vinculación"
+)
+
+FUNCIONALIDADES_BASE_MASIVO = (
+    "Ingreso APP Nequi, Consulta de Saldo, Envio Bancolombia a Nequi, "
+    "Envio Nequi a Bancolombia, Envio Nequi a Nequi, Envio a otros Bancos, "
+    "Generación de OTP Retiros, Retiros Cajeros ATM, Envio Bre-B, Recepcion Bre-B, "
+    "Tarjeta Física, Tarjeta Digital, Recargas CB Bancolombia, Retiros CB Bancolombia, "
+    "Recargas CB Nequi, Retiros CB Nequi, Pagos PSE, Recargas PSE, Apis, "
+    "Pagos de Creditos, Pay Pal, Remesas, "
+    "Servicios Armario - Recargas y Paquetes (operador Tigo), "
+    "Servicios Armario - Recargas y Paquetes (operador Claro), Vinculación"
+)
+
+### --- 1. LISTADOS DE SERVICIOS ---
+LISTA_SERVICIOS_GRAL = [
+    "Ingreso APP Nequi", "Consulta de Saldo", "Envio Bancolombia a Nequi",
+    "Envio Nequi a Bancolombia", "Envio Nequi a Nequi",
+    "Envio a otros Bancos", "Generación de OTP Retiros", "Retiros Cajeros",
+    "Envio Bre-B", "Recepcion Bre-B", "Tarjeta Física", "Tarjeta Digital",
+    "Recargas CB Bancolombia", "Retiros CB Bancolombia", "Recargas CB Nequi",
+    "Retiros CB Nequi", "Pagos PSE", "Recargas PSE", "Apis", "Pagos de Creditos",
+    "Pay Pal", "Remesas",
+    "Servicios Armario - Recargas y Paquetes (operador Tigo)",
+    "Servicios Armario - Recargas y Paquetes (operador Claro)", "Vinculación",
+    "Descarga App", "Descarga App GT", "Cierre de Cuenta",
+    "Vinculación (Deposito bajo monto)", "Tarjeta Pismo", "Gestión llaves BreB",
+    "Transacciones SPI BreB", "App Nequi Negocios", "Gestión de la cuenta",
+    "Pagos a través de QR Bancolombia a Nequi P2P EMVCO",
+    "Pagos a través de QR Datáfono", "Pagos a través de QR Interoperable otros Bancos",
+    "QR Interoperable Nequi", "Paso PSE Avanza", "Botón de pagos",
+    "Pagos Automáticos", "Pagar botón de negocios",
+    "Envío entre Nequis (Directo y con QR)", "Envío Nequi a Bancolombia (Directo y por QR)",
+    "Envío a otros bancos (ACH)", "Enviar por Transfiya",
+    "Recibir por Transfiya (Deshabilitado)", "Envío Bancolombia a Nequi",
+    "Transferencia ACH - Nequi", "Transferencia Bancolombia - Nequi",
+    "Transferencia Nequi - Bancolombia", "Recarga plata al toque", "Recarga PSE",
+    "Recargas Nequi desde otros Bancos (Deshabilitado)",
+    "Recarga CB Nequi (Punto Red, PTM)", "Cashin Aliado Pronet",
+    "Retiros en contingencia", "Retiros CB Nequi (PTM, Punto Red)",
+    "Retiros cajeros ATM", "Cashout Aliado Pronet", "Cashout Aliado 5B",
+    "Crédito", "Préstamo Salvavidas (DESHABILITADO)", "Crédito OAF (Originación al frente)",
+    "Crédito desde botón Nequi", "Consulta de cupo de crédito desde comercios",
+    "Vinculación de cuenta de ahorros (Romper Topes)", "Remesas Terrapay",
+    "PayPal", "Payoneer", "Consulta de movimientos", "Consulta de saldo",
+    "Colchón", "Sobres - Bolsillos", "Metas (Chubales)",
+    "Servicios hogar y paquetes", "Entretenimiento", "Donaciones",
+    "Servicios Públicos", "Seguridad y Salud", "Recaudos Masivos",
+    "Paquetes y recargas celular", "Ventas por catálogo",
+    "Beneficios NEQUI", "API Dispersiones", "Pago de nómina",
+    "Integración técnica", "Transacciones activos digitales"
+]
+
+LISTA_MASIVO = [
+    "Ingreso APP Nequi", "Consulta de Saldo", "Envio Bancolombia a Nequi",
+    "Envio Nequi a Bancolombia", "Envio Nequi a Nequi",
+    "Envio a otros Bancos", "Generación de OTP Retiros", "Retiros Cajeros ATM",
+    "Envio Bre-B", "Recepcion Bre-B", "Tarjeta Física", "Tarjeta Digital",
+    "Recargas CB Bancolombia", "Retiros CB Bancolombia", "Recargas CB Nequi",
+    "Retiros CB Nequi", "Pagos PSE", "Recargas PSE", "Apis", "Pagos de Creditos",
+    "Pay Pal", "Remesas",
+    "Servicios Armario - Recargas y Paquetes (operador Tigo)",
+    "Servicios Armario - Recargas y Paquetes (operador Claro)", "Vinculación"
+]
+
+LISTA_BANCOS_BREB = [
+    "Envío Bre-B", "Recepción Bre-B", "Envío Bre-B (Daviplata)",
+    "Recepción Bre-B (Daviplata)", "Envío Bre-B (Davivienda)",
+    "Recepción Bre-B (Davivienda)", "Envío Bre-B (BBVA)", "Recepción Bre-B (BBVA)",
+    "Envío Bre-B (Bogotá)", "Recepción Bre-B (Bogotá)",
+    "Envío Bre-B (Banco NU)", "Recepción Bre-B (Banco NU)",
+    "Envío Bre-B (Caja social)", "Recepción Bre-B (Caja social)",
+    "Envío Bre-B (Bancolombia)", "Recepción Bre-B (Bancolombia)",
+    "Envío Bre-B (AV Villas)", "Recepción Bre-B (AV Villas)",
+    "Envío Bre-B (DaviBank)", "Recepción Bre-B (DaviBank)",
+    "Envío Bre-B (Popular)", "Recepción Bre-B (Popular)",
+    "Envío Bre-B (Falabella)", "Recepción Bre-B (Falabella)",
+    "Envío Bre-B (Dale)", "Recepción Bre-B (Dale)",
+    "Envío Bre-B (BOLD)", "Recepción Bre-B (BOLD)",
+    "Envío Bre-B (LULO BANK)", "Recepción Bre-B (LULO BANK)",
+    "Envío Bre-B (Movil)", "Recepción Bre-B (Movil)",
+    "Envío Bre-B (Itau)", "Recepción Bre-B (Itau)",
+    "Envío Bre-B (Occidente)", "Recepción Bre-B (Occidente)",
+    "Envío Bre-B (BANCO AGRARIO)", "Recepción Bre-B (BANCO AGRARIO)",
+    "Envío Bre-B (RAPPIPAY)", "Recepción Bre-B (RAPPIPAY)",
+    "Envío Bre-B (DING)", "Recepción Bre-B (DING)",
+    "Envío Bre-B (EMPLEADOS PRESENTE)", "Recepción Bre-B (EMPLEADOS PRESENTE)"
+]
+
+LISTA_PSE = ["Pagos PSE", "Recargas PSE"]
+mapping_estados = {"✅": "OK", "❌": "TOTAL", "⚠️": "PARCIAL"}
+
+### --- 2. INICIALIZACIÓN DE ESTADOS ---
+if 'lista_tipo' not in st.session_state:
+    st.session_state.lista_tipo = "completa"
+if 'cargado_desde_db' not in st.session_state:
+    st.session_state.cargado_desde_db = set()
+
+tipo = st.session_state.lista_tipo
+
+for t in ["completa", "pse", "spi_breb", "masivo"]:
+    if f'num_serv_{t}' not in st.session_state: st.session_state[f'num_serv_{t}'] = 1
+    if f'num_av_{t}' not in st.session_state: st.session_state[f'num_av_{t}'] = 1
+    if f'h_ref_ini_{t}' not in st.session_state: st.session_state[f'h_ref_ini_{t}'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+    if f'h_ref_fin_{t}' not in st.session_state: st.session_state[f'h_ref_fin_{t}'] = ""
+    if f'jira_in_{t}' not in st.session_state: st.session_state[f'jira_in_{t}'] = ""
+    if f'caso_in_{t}' not in st.session_state: st.session_state[f'caso_in_{t}'] = ""
+    if f'comp_in_{t}' not in st.session_state: st.session_state[f'comp_in_{t}'] = ""
+    if f'imp_in_{t}' not in st.session_state: st.session_state[f'imp_in_{t}'] = ""
+    if f'fun_in_{t}' not in st.session_state: st.session_state[f'fun_in_{t}'] = ""
+    if f'fun_base_{t}' not in st.session_state: st.session_state[f'fun_base_{t}'] = ""
+    if f'des_in_{t}' not in st.session_state: st.session_state[f'des_in_{t}'] = ""
+    if f'check_sol_{t}' not in st.session_state: st.session_state[f'check_sol_{t}'] = False
+    if f'sol_txt_{t}' not in st.session_state: st.session_state[f'sol_txt_{t}'] = "Estabilidad evidenciada..."
+    if f'av_0_{t}' not in st.session_state: st.session_state[f'av_0_{t}'] = ""
+
+# Cargar datos (solo una vez por pestaña por sesión)
+# Prioridad: JSON local (rápido) → Supabase como respaldo
+if tipo not in st.session_state.cargado_desde_db:
+    if not cargar_desde_json(tipo):
+        cargar_desde_supabase(tipo)
+    st.session_state.cargado_desde_db.add(tipo)
+
+### --- 3. BARRA LATERAL ---
+st.sidebar.header("⌚ Gestión de Tiempo")
+h_ini_in = st.sidebar.text_input("Hora Inicio Referencia:", value=st.session_state[f'h_ref_ini_{tipo}'])
+if st.sidebar.button("🕒 Aplicar Inicio a Plantilla Actual"):
+    st.session_state[f'h_ref_ini_{tipo}'] = h_ini_in
+    for i in range(st.session_state[f'num_serv_{tipo}']):
+        st.session_state[f"i_{i}_{tipo}"] = h_ini_in
+    st.rerun()
+
+h_fin_in = st.sidebar.text_input("Hora Fin Referencia:", value=st.session_state[f'h_ref_fin_{tipo}'] if st.session_state[f'h_ref_fin_{tipo}'] else datetime.now().strftime("%d/%m/%Y %H:%M"))
+if st.sidebar.button("🕒 Aplicar Fin a Plantilla Actual"):
+    st.session_state[f'h_ref_fin_{tipo}'] = h_fin_in
+    for i in range(st.session_state[f'num_serv_{tipo}']):
+        st.session_state[f"f_{i}_{tipo}"] = h_fin_in
+    st.rerun()
+
+if st.sidebar.button("🧹 Limpiar Horas, Jira, Caso y Avances"):
+    for i in range(st.session_state[f'num_serv_{tipo}']):
+        st.session_state[f"i_{i}_{tipo}"] = ""
+        st.session_state[f"f_{i}_{tipo}"] = ""
+    st.session_state[f'jira_in_{tipo}'] = ""
+    st.session_state[f'caso_in_{tipo}'] = ""
+    if f'comp_in_{tipo}' in st.session_state: st.session_state[f'comp_in_{tipo}'] = ""
+    # Limpiar avances
+    for i in range(st.session_state.get(f'num_av_{tipo}', 1)):
+        st.session_state[f"av_{i}_{tipo}"] = ""
+    st.session_state[f'num_av_{tipo}'] = 1
+    st.session_state[f'av_0_{tipo}'] = ""
+    st.rerun()
+
+st.sidebar.divider()
+
+# --- NAVEGADOR ---
+st.sidebar.header("🔄 Navegar (No borra datos)")
+vistas = {
+    "completa": "Plantilla Inicial",
+    "pse": "Plantilla PSE",
+    "spi_breb": "Plantilla SPI BreB",
+    "masivo": "Evento Masivo"
+}
+
+try:
+    idx_actual = list(vistas.keys()).index(st.session_state.lista_tipo)
+except ValueError:
+    idx_actual = 0
+
+seleccion_nav = st.sidebar.selectbox("Ir a otra plantilla:", options=list(vistas.values()), index=idx_actual)
+
+for clave, nombre in vistas.items():
+    if nombre == seleccion_nav and st.session_state.lista_tipo != clave:
+        st.session_state.lista_tipo = clave
+        st.rerun()
+
+st.sidebar.divider()
+st.sidebar.header("🚀 Cargar / Resetear (¡BORRA DATOS!)")
+
+if st.sidebar.button("Cargar Plantilla Inicial"):
+    t = "completa"; st.session_state.lista_tipo = t
+    st.session_state[f'num_serv_{t}'] = 1
+    st.session_state[f's_list_0_{t}'] = "Ingreso APP Nequi"
+    st.session_state[f'imp_in_{t}'] = "Se presenta afectación en el servicio"
+    st.session_state[f'fun_in_{t}'] = FUNCIONALIDADES_BASE
+    st.session_state[f'fun_base_{t}'] = FUNCIONALIDADES_BASE
+    st.session_state[f'des_in_{t}'] = "Se evidencia disminución de transacciones en el servicio señalado. En el momento estamos validando la situación e identificación de la posible causa raíz."
+    st.session_state.cargado_desde_db.discard(t)
+    st.rerun()
+
+if st.sidebar.button("Cargar Plantilla PSE"):
+    t = "pse"; st.session_state.lista_tipo = t
+    st.session_state[f'num_serv_{t}'] = 2
+    st.session_state[f's_list_0_{t}'] = "Pagos PSE"
+    st.session_state[f's_list_1_{t}'] = "Recargas PSE"
+    st.session_state[f'imp_in_{t}'] = "Usuarios presentan problemas para realizar transacciones a través del servicio PSE."
+    st.session_state[f'fun_in_{t}'] = FUNCIONALIDADES_BASE
+    st.session_state[f'fun_base_{t}'] = FUNCIONALIDADES_BASE
+    st.session_state[f'des_in_{t}'] = "Se evidencia disminución de transacciones con servicio PSE. En el momento estamos validando la situación e identificación de la posible causa raíz."
+    st.session_state.cargado_desde_db.discard(t)
+    st.rerun()
+
+if st.sidebar.button("Cargar Plantilla SPI BreB"):
+    t = "spi_breb"; st.session_state.lista_tipo = t
+    st.session_state[f'num_serv_{t}'] = 2
+    st.session_state[f's_list_0_{t}'] = "Envío Bre-B"
+    st.session_state[f's_list_1_{t}'] = "Recepción Bre-B"
+    st.session_state[f'imp_in_{t}'] = "Se registra afectación en el servicio de Transacciones SPI BreB para P2P – P2M."
+    st.session_state[f'fun_in_{t}'] = FUNCIONALIDADES_BASE
+    st.session_state[f'fun_base_{t}'] = FUNCIONALIDADES_BASE
+    st.session_state[f'des_in_{t}'] = "Se presenta rechazos de transacciones SPI Bre-B. En el momento estamos validando la situación e identificación de la posible causa raíz."
+    st.session_state.cargado_desde_db.discard(t)
+    st.rerun()
+
+if st.sidebar.button("Cargar Evento Masivo"):
+    t = "masivo"; st.session_state.lista_tipo = t
+    st.session_state[f'num_serv_{t}'] = len(LISTA_MASIVO)
+    for i, s_val in enumerate(LISTA_MASIVO): st.session_state[f's_list_{i}_{t}'] = s_val
+    st.session_state[f'imp_in_{t}'] = "Se presenta intermitencia en los servicios de Nequi"
+    st.session_state[f'fun_in_{t}'] = FUNCIONALIDADES_BASE_MASIVO
+    st.session_state[f'fun_base_{t}'] = FUNCIONALIDADES_BASE_MASIVO
+    st.session_state[f'des_in_{t}'] = "Actualmente estamos presentando intermitencia en nuestros servicios. En el momento estamos validando la situación e identificación de la posible causa raíz."
+    st.session_state.cargado_desde_db.discard(t)
+    st.rerun()
+
+st.sidebar.divider()
+st.sidebar.header("⚙️ Canales")
+webhook_1 = st.sidebar.text_input("Webhook Canal 1", value=_URL_1)
+webhook_2 = st.sidebar.text_input("Webhook Canal 2", value=_URL_2)
+
+### --- 4. TABLA DE SERVICIOS ---
+st.subheader(f"Servicio Impactado ({tipo.upper()}):")
+st.write("**Cambio de Estado Global:**")
+cg1, cg2, cg3 = st.columns(3)
+
+if cg1.button("🔴 Todos TOTAL"):
+    for i in range(st.session_state[f'num_serv_{tipo}']): st.session_state[f"e_{i}_{tipo}"] = "❌"
+    st.rerun()
+if cg2.button("⚠️ Todos PARCIAL"):
+    for i in range(st.session_state[f'num_serv_{tipo}']): st.session_state[f"e_{i}_{tipo}"] = "⚠️"
+    st.rerun()
+if cg3.button("🟢 Todos OK"):
+    for i in range(st.session_state[f'num_serv_{tipo}']): st.session_state[f"e_{i}_{tipo}"] = "✅"
+    st.rerun()
+
+c_add, c_rem, _ = st.columns(3)
+with c_add:
+    if st.button("➕ Agregar"):
+        st.session_state[f'num_serv_{tipo}'] += 1; st.rerun()
+with c_rem:
+    if st.button("➖ Quitar"):
+        st.session_state[f'num_serv_{tipo}'] = max(1, st.session_state[f'num_serv_{tipo}'] - 1); st.rerun()
+
+col_widths = [0.6, 3.0, 1.2, 1.5, 1.2]
+h1, h2, h3, h4, h5 = st.columns(col_widths)
+h1.write("**ESTADO**"); h2.write("**SERVICIO**"); h3.write("**AFECTACIÓN**"); h4.write("**INICIO**"); h5.write("**FIN**")
+
+for i in range(st.session_state[f'num_serv_{tipo}']):
+    c1, c2, c3, c4, c5 = st.columns(col_widths)
+    with c1:
+        est = st.selectbox(f"E{i}", list(mapping_estados.keys()), key=f"e_{i}_{tipo}", label_visibility="collapsed")
+    with c2:
+        if tipo == "spi_breb": cur_list = LISTA_BANCOS_BREB
+        elif tipo == "masivo": cur_list = LISTA_MASIVO
+        elif tipo == "pse": cur_list = LISTA_SERVICIOS_GRAL
+        else: cur_list = LISTA_SERVICIOS_GRAL
+        s_val = st.session_state.get(f's_list_{i}_{tipo}')
+        idx = cur_list.index(s_val) if s_val in cur_list else (i if i < len(cur_list) else 0)
+        st.selectbox(f"Sl_{i}", cur_list, index=idx, key=f"s_list_{i}_{tipo}", label_visibility="collapsed")
+    with c3:
+        st.text_input(f"T{i}", value=mapping_estados[est], key=f"t_in_{i}_{tipo}_{est}", label_visibility="collapsed")
+    with c4:
+        st.text_input(f"I{i}", value=st.session_state.get(f"i_{i}_{tipo}", st.session_state[f'h_ref_ini_{tipo}']), key=f"i_{i}_{tipo}", label_visibility="collapsed")
+    with c5:
+        st.text_input(f"F{i}", value=st.session_state.get(f"f_{i}_{tipo}", st.session_state[f'h_ref_fin_{tipo}']), key=f"f_{i}_{tipo}", label_visibility="collapsed")
+
+### --- 5. CAMPOS TÉCNICOS ---
+st.divider()
+
+base_fun = st.session_state.get(f'fun_base_{tipo}', "")
+if base_fun and base_fun != "N/A":
+    lista_actual = base_fun
+    for i in range(st.session_state[f'num_serv_{tipo}']):
+        estado = st.session_state.get(f"e_{i}_{tipo}")
+        serv_nombre = st.session_state.get(f"s_list_{i}_{tipo}", "")
+        if estado in ["❌", "⚠️"] and serv_nombre:
+            if tipo == "spi_breb":
+                if "Envío" in serv_nombre or "Envio" in serv_nombre:
+                    lista_actual = lista_actual.replace("Envío Bre-B", "").replace("Envio Bre-B", "")
+                if "Recepción" in serv_nombre or "Recepcion" in serv_nombre:
+                    lista_actual = lista_actual.replace("Recepción Bre-B", "").replace("Recepcion Bre-B", "")
+            else:
+                lista_actual = lista_actual.replace(f"{serv_nombre}, ", "").replace(f", {serv_nombre}", "").replace(serv_nombre, "")
+    st.session_state[f'fun_in_{tipo}'] = lista_actual.replace("  ", " ").strip(", ")
+
+st.text_area("Impacto A Usuarios", key=f"imp_in_{tipo}")
+st.text_area("Funcionalidades OK", key=f"fun_in_{tipo}")
+st.text_area("Descripción de la falla", key=f"des_in_{tipo}")
+col_j, col_c = st.columns(2)
+with col_j: st.text_input("Jira", key=f"jira_in_{tipo}")
+with col_c: st.text_input("Caso Aliado / Incidente Banco", key=f"caso_in_{tipo}")
+st.text_input("Componente Afectado:", key=f"comp_in_{tipo}")
+
+st.subheader("Seguimiento:")
+if st.button("➕ Nuevo Avance"):
+    st.session_state[f'num_av_{tipo}'] += 1; st.rerun()
+for i in range(st.session_state[f'num_av_{tipo}']):
+    st.text_area(f"Avance {i+1}", key=f"av_{i}_{tipo}")
+
+check_sol = st.checkbox("✅ ¿Incluir Solución Final?", key=f"check_sol_{tipo}")
+if check_sol:
+    st.text_area("Solución Final:", key=f"sol_txt_{tipo}", value="Estabilidad evidenciada...", label_visibility="collapsed")
+
+### --- BOTÓN GUARDAR ---
+st.divider()
+if st.button("💾 GUARDAR PLANTILLA ACTUAL", use_container_width=True):
+    ok_supa = guardar_en_supabase(tipo)
+    ok_json = guardar_en_json(tipo)
+    if ok_supa and ok_json:
+        st.success(f"✅ Plantilla '{vistas.get(tipo, tipo)}' guardada en Supabase y localmente.")
+    elif ok_json:
+        st.warning("⚠️ Guardado solo localmente (Supabase no disponible).")
+    else:
+        st.error("❌ No se pudo guardar.")
+
+### --- 6. ENVÍO A TEAMS ---
+st.divider()
+canales_sel = st.multiselect("Canales de envío:", ["Canal 1", "Canal 2"], default=["Canal 1"])
+
+if st.button("🚀 DESPLEGAR NOTIFICACIÓN A TEAMS", type="primary", use_container_width=True):
+    tabla = "| ESTADO | SERVICIO | TIPO DE AFECTACIÓN | HORA INICIO | HORA FIN |\n| :--- | :--- | :--- | :--- | :--- |\n"
+    for i in range(st.session_state[f'num_serv_{tipo}']):
+        e = st.session_state[f'e_{i}_{tipo}']
+        s = st.session_state[f's_list_{i}_{tipo}']
+        t_val = st.session_state[f't_in_{i}_{tipo}_{e}']
+        ini = st.session_state.get(f'i_{i}_{tipo}', '')
+        fin = st.session_state.get(f'f_{i}_{tipo}', '')
+        tabla += f"| {e} | {s} | {t_val} | {ini} | {fin} |\n"
+
+    avances_body = "".join([
+        f"- **Avance {idx+1}:** {st.session_state.get(f'av_{idx}_{tipo}', '').strip()}\n"
+        for idx in range(st.session_state[f'num_av_{tipo}'])
+    ])
+
+    mensaje_final = (
+        f"### 🚨 Notificador de Incidentes\n\n"
+        f"#### Servicios Afectados:\n{tabla}\n\n"
+        f"****\n\n"
+        f"**Impacto A Usuarios:** {st.session_state[f'imp_in_{tipo}']}\n\n"
+        f"**Funcionalidades OK:** {st.session_state[f'fun_in_{tipo}']}\n\n"
+        f"**Descripción de la falla:** {st.session_state[f'des_in_{tipo}']}\n\n"
+        f"**Jira:** {st.session_state[f'jira_in_{tipo}']}\n\n"
+        f"**Caso Aliado / Incidente Banco:** {st.session_state[f'caso_in_{tipo}']}\n\n"
+        f"**Componente Afectado:** {st.session_state.get(f'comp_in_{tipo}', 'N/A')}\n\n"
+        f"\n\n{avances_body}"
+    )
+
+    if st.session_state.get(f'check_sol_{tipo}'):
+        mensaje_final += f"\n\n**✅ Solución Final:** {st.session_state.get(f'sol_txt_{tipo}', '')}"
+
+    payload = {"text": mensaje_final}
+    for c in canales_sel:
+        target = webhook_1 if c == "Canal 1" else webhook_2
+        if not target or not target.startswith("http"):
+            st.warning(f"⚠️ El webhook de {c} no está configurado.")
+            continue
+        try:
+            r = requests.post(target, json=payload, timeout=15)
+            if r.status_code == 200:
+                st.success(f"✅ Notificación enviada correctamente a {c}.")
+            else:
+                st.error(f"❌ Error en {c}: código {r.status_code}")
+        except requests.exceptions.Timeout:
+            st.error(f"❌ Tiempo agotado en {c}.")
+        except requests.exceptions.ConnectionError:
+            st.error(f"❌ No se pudo conectar a {c}.")
+        except Exception as ex:
+            st.error(f"❌ Error inesperado en {c}: {ex}")
