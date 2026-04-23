@@ -23,8 +23,8 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 ARCHIVO_LOCAL = "estado_plantillas.json"
 
-_URL_1 = "https://bancolombia.webhook.office.com/webhookb2/e126a021-2786-40af-9af6-6921684d3c4f@b5e244bd-c492-495b-8b10-61bfd453e423/IncomingWebhook/6ff718d420024fe5a6e4a716eacdcd55/94d1f457-3cf7-4e68-890f-31aa6d2bc930/V2_jfe8qFPIqQoNVEkWkI9D-ooJ1-HNCH0lP896k7rcWo1"
-_URL_2 = "https://bancolombia.webhook.office.com/webhookb2/091d31d5bf254c548ffb41dba34a94e4/3dc687a8-9ce6-4106-bdac-8e2f43fed8c6/V2HHl-u0sIp-3hiZozOHRtoSOkyAnjuUvk1Cr6AALRXgI1"
+_URL_1 = "https://defaultb5e244bdc492495b8b1061bfd453e4.23.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/24f11a0240cb43bf8d71092df7b1126b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hekHKuOhVOITmF6BS9KkGZ0OfzDp5C-D-fEMQKJzsXM"
+_URL_2 = "https://bancolombia.webhook.office.com/webhookb2/e126a021-2786-40af-9af6-6921684d3c4f@b5e244bd-c492-495b-8b10-61bfd453e423/IncomingWebhook/6ff718d420024fe5a6e4a716eacdcd55/94d1f457-3cf7-4e68-890f-31aa6d2bc930/V2_jfe8qFPIqQoNVEkWkI9D-ooJ1-HNCH0lP896k7rcWo1"
 
 # ==============================================================================
 # FUNCIONES DE GUARDADO Y CARGA
