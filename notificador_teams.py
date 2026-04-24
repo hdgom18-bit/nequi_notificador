@@ -23,7 +23,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 ARCHIVO_LOCAL = "estado_plantillas.json"
 
-_URL_1 = "https://bancolombia.webhook.office.com/webhookb2/e126a021-2786-40af-9af6-6921684d3c4f@b5e244bd-c492-495b-8b10-61bfd453e423/IncomingWebhook/be259da0aa594f47be06abe0e9ca66f9/94d1f457-3cf7-4e68-890f-31aa6d2bc930/V2QBoPL1Y4cVWZuS7g775jzeC9dv_XY-SXLvpjh6UCp9I1"
+_URL_1 = "https://bancolombia.webhook.office.com/webhookb2/e126a021-2786-40af-9af6-6921684d3c4f@b5e244bd-c492-495b-8b10-61bfd453e423/IncomingWebhook/f07e473cdb9a44258b1ea146832401d1/94d1f457-3cf7-4e68-890f-31aa6d2bc930/V2unN_qcS3H_JfUcSUwPlWC0U29uIeCbKi_-jfi6_oSe01"
 _URL_2 = "https://bancolombia.webhook.office.com/webhookb2/e126a021-2786-40af-9af6-6921684d3c4f@b5e244bd-c492-495b-8b10-61bfd453e423/IncomingWebhook/6ff718d420024fe5a6e4a716eacdcd55/94d1f457-3cf7-4e68-890f-31aa6d2bc930/V2_jfe8qFPIqQoNVEkWkI9D-ooJ1-HNCH0lP896k7rcWo1"
 
 # ==============================================================================
@@ -162,41 +162,60 @@ FUNCIONALIDADES_BASE_MASIVO = (
 
 ### --- 1. LISTADOS DE SERVICIOS ---
 LISTA_SERVICIOS_GRAL = [
-    "Ingreso APP Nequi", "Consulta de Saldo", "Envio Bancolombia a Nequi",
-    "Envio Nequi a Bancolombia", "Envio Nequi a Nequi",
-    "Envio a otros Bancos", "Generación de OTP Retiros", "Retiros Cajeros",
-    "Envio Bre-B", "Recepcion Bre-B", "Tarjeta Física", "Tarjeta Digital",
-    "Recargas CB Bancolombia", "Retiros CB Bancolombia", "Recargas CB Nequi",
-    "Retiros CB Nequi", "Pagos PSE", "Recargas PSE", "Apis", "Pagos de Creditos",
-    "Pay Pal", "Remesas",
-    "Servicios Armario - Recargas y Paquetes (operador Tigo)",
-    "Servicios Armario - Recargas y Paquetes (operador Claro)", "Vinculación",
-    "Descarga App", "Descarga App GT", "Cierre de Cuenta",
-    "Vinculación (Vinculación liviana)", "Tarjeta Pismo", "Gestión llaves BreB",
-    "Transacciones SPI BreB", "App Nequi Negocios", "Gestión de la cuenta",
-    "Pagos a través de QR Bancolombia a Nequi P2P EMVCO",
-    "Pagos a través de QR Datáfono", "Pagos a través de QR Interoperable otros Bancos",
-    "QR Interoperable Nequi", "Paso PSE Avanza", "Botón de pagos",
-    "Pagos Automáticos", "Pagar botón de negocios",
-    "Envío entre Nequis (Directo y con QR)", "Envío Nequi a Bancolombia (Directo y por QR)",
-    "Envío a otros bancos (ACH)", "Enviar por Transfiya",
-    "Recibir por Transfiya (Deshabilitado)", "Envío Bancolombia a Nequi",
-    "Transferencia ACH - Nequi", "Transferencia Bancolombia - Nequi",
-    "Transferencia Nequi - Bancolombia", "Recarga plata al toque", "Recarga PSE",
+    "Descarga App", "Descarga App GT", "Ingreso App Nequi", "Cierre de Cuenta",
+    "Vinculacion (Vinculacion liviana)", "Vinculacion", "Tarjeta", "Tarjeta Pismo",
+    "Remesas RIA (deshabilitado)", "PayPal",
+    "Reportería Airflow - Deshabilitado", "Reportería Airflow Aliados - Deshabilitado",
+    "Reportería Airflow Contabilidad - Deshabilitado", "Reportería Airflow Legales - Deshabilitado",
+    "Reportería Airflow clientes B2b- Deshabilitado", "Reporteria Metabase- Deshabilitado",
+    "Pagos atraves QR Bancolombia a Nequi P2P EMVCO", "Pagos a traves QR Datafono",
+    "Pagos a traves QR Interoperable otros Bancos", "QR Interoperable Nequi",
+    "Credito", "Prestamo Salvavidas - DESHABILITADO",
+    "Envio entre Nequis", "Envio entre Nequis con QR",
+    "Envio Nequi a Bancolombia", "Envio Nequi a Bancolombia por QR",
+    "Envio a otros bancos (ACH)", "Envio Nequi a otros bancos GT - Deshabilitado",
+    "Enviar por Transfiya", "Pagos Automaticos", "Recarga plata al toque", "Payoneer",
+    "Gestion llaves BreB", "Transacciones SPI Breb",
+    "Sacar (Deshabilitado)", "Recarga (Deshabilitado)", "Seguridad (Deshabiltado)",
+    "Pagos PSE", "Paso PSE Avanza",
+    "Solcitud Documentos (Deshabilitado)", "Distribucion plata (Deshabilitado)",
+    "Vinculacion de cuenta de ahorro (Romper Topes)", "Remesas Terrapay",
+    "Solicitud documentos credito - DESHABILITADO", "Retiros en contingencia",
+    "Servicios Financieros - DESHABILITADO",
+    "Api Codigos por plata", "Api Dispersiones", "Api pagos push", "Api pagos QR",
+    "Api pago suscripciones", "Api Super QR", "Cobros Nequi", "Registro negocios Nequi",
+    "Pagar boton de negocios", "Beneficios NEQUI", "Api Experiencias Embebidas",
+    "Servicios hogar y paquetes", "Entretenimiento", "Transportes recargas",
+    "Donaciones", "Servicios Publicos", "Seguridad y Salud", "Recaudos Masivos",
+    "Paquetes y recargas celular", "Ventas por catalogo", "Financiero",
+    "Envio Bancolombia a Nequi", "Recarga PSE",
     "Recargas Nequi desde otros Bancos (Deshabilitado)",
-    "Recarga CB Nequi (Punto Red, PTM)", "Cashin Aliado Pronet",
-    "Retiros en contingencia", "Retiros CB Nequi (PTM, Punto Red)",
-    "Retiros cajeros ATM", "Cashout Aliado Pronet", "Cashout Aliado 5B",
-    "Crédito", "Préstamo Salvavidas (DESHABILITADO)", "Crédito OAF (Originación al frente)",
-    "Crédito desde botón Nequi", "Consulta de cupo de crédito desde comercios",
-    "Vinculación de cuenta de ahorros (Romper Topes)", "Remesas Terrapay",
-    "PayPal", "Payoneer", "Consulta de movimientos", "Consulta de saldo",
-    "Colchón", "Sobres - Bolsillos", "Metas (Chubales)",
-    "Servicios hogar y paquetes", "Entretenimiento", "Donaciones",
-    "Servicios Públicos", "Seguridad y Salud", "Recaudos Masivos",
-    "Paquetes y recargas celular", "Ventas por catálogo",
-    "Beneficios NEQUI", "API Dispersiones", "Pago de nómina",
-    "Integración técnica", "Transacciones activos digitales"
+    "Recibir por Transfiya (Deshabilitado)", "Pago de nomina",
+    "Recargas CB Bancolombia", "Recarga CB Nequi Punto Red", "Recarga CB Nequi PTM",
+    "Recargas CB Nequi", "Credito OAF (Originacion al frente)", "Credito desde boton Nequi",
+    "Experiencias digitales - Deshabilitado",
+    "Retiro CB Nequi PTM", "Retiro CB Nequi Punto Red", "Retiros CB Nequi",
+    "Retiros CB Bancolombia", "Retiros cajeros ATM", "Generacion de OTP Retiros",
+    "Servicio PTM", "Remesas", "Consulta de movimientos", "Colchon",
+    "Consulta de saldo", "Consulta de Bolsillos", "Sobres - Bolsillos",
+    "Metas", "Metas (Chubales)", "App nequi negocios",
+    "Pide a un Nequi", "Pide por transfiya (Deshabilitado)",
+    "Certificacion Bancaria", "Certificado declaracion de renta",
+    "Generar el reporte de extracto",
+    "Experiencias Embebidas FLIPCAT", "Experiencias Embebidas GOAMA",
+    "Experiencias Embebidas PINBUS", "Experiencias Embebidas GOPASS",
+    "Transferencia ACH - Nequi", "Transferencia Bam - Nequi", "Transferencia Nequi - Bam",
+    "Cashout Aliado Pronet", "Cashout Aliado 5B", "Cashin Aliado Pronet",
+    "Boton de pagos", "Consulta de cupo de credito desde comercios",
+    "Giros a un link", "Integracion tecnica", "Gestion de la cuenta",
+    "Transacciones activos digitales"
+]
+
+LISTA_BANCO = [
+    "Envio Bancolombia a Nequi", "Recarga plata al toque", "Api Dispersiones",
+    "Remesas", "PayPal", "Transferencia Nequi - Bam", "Transferencia Bam - Nequi",
+    "Recibir por Transfiya (Deshabilitado)", "Enviar por Transfiya",
+    "Gestion llaves BreB", "Transacciones SPI Breb"
 ]
 
 LISTA_MASIVO = [
@@ -246,7 +265,7 @@ if 'cargado_desde_db' not in st.session_state:
 
 tipo = st.session_state.lista_tipo
 
-for t in ["completa", "pse", "spi_breb", "masivo"]:
+for t in ["completa", "banco", "pse", "spi_breb", "masivo"]:
     if f'num_serv_{t}' not in st.session_state: st.session_state[f'num_serv_{t}'] = 1
     if f'num_av_{t}' not in st.session_state: st.session_state[f'num_av_{t}'] = 1
     st.session_state[f'h_ref_ini_{t}'] = datetime.now(COLOMBIA_TZ).strftime("%d/%m/%Y %H:%M")
@@ -304,29 +323,6 @@ if st.sidebar.button("🧹 Limpiar Horas, Jira, Caso y Avances"):
     st.rerun()
 
 st.sidebar.divider()
-
-# --- NAVEGADOR ---
-st.sidebar.header("🔄 Navegar (No borra datos)")
-vistas = {
-    "completa": "Plantilla Inicial",
-    "pse": "Plantilla PSE",
-    "spi_breb": "Plantilla SPI BreB",
-    "masivo": "Evento Masivo"
-}
-
-try:
-    idx_actual = list(vistas.keys()).index(st.session_state.lista_tipo)
-except ValueError:
-    idx_actual = 0
-
-seleccion_nav = st.sidebar.selectbox("Ir a otra plantilla:", options=list(vistas.values()), index=idx_actual)
-
-for clave, nombre in vistas.items():
-    if nombre == seleccion_nav and st.session_state.lista_tipo != clave:
-        st.session_state.lista_tipo = clave
-        st.rerun()
-
-st.sidebar.divider()
 st.sidebar.header("🚀 Cargar / Resetear (¡BORRA DATOS!)")
 
 if st.sidebar.button("Cargar Plantilla Inicial"):
@@ -349,6 +345,18 @@ if st.sidebar.button("Cargar Plantilla PSE"):
     st.session_state[f'fun_in_{t}'] = FUNCIONALIDADES_BASE
     st.session_state[f'fun_base_{t}'] = FUNCIONALIDADES_BASE
     st.session_state[f'des_in_{t}'] = "Se evidencia disminución de transacciones con servicio PSE. En el momento estamos validando la situación e identificación de la posible causa raíz."
+    st.session_state.cargado_desde_db.discard(t)
+    st.rerun()
+
+
+if st.sidebar.button("Cargar Plantilla Banco"):
+    t = "banco"; st.session_state.lista_tipo = t
+    st.session_state[f'num_serv_{t}'] = len(LISTA_BANCO)
+    for i, s_val in enumerate(LISTA_BANCO): st.session_state[f's_list_{i}_{t}'] = s_val
+    st.session_state[f'imp_in_{t}'] = "Se evidencia bajo flujo transaccional en la transferencia Bancolombia a Nequi"
+    st.session_state[f'fun_in_{t}'] = FUNCIONALIDADES_BASE
+    st.session_state[f'fun_base_{t}'] = FUNCIONALIDADES_BASE
+    st.session_state[f'des_in_{t}'] = "Se observa caída transaccional en el servicio de transferencia Bancolombia a Nequi"
     st.session_state.cargado_desde_db.discard(t)
     st.rerun()
 
@@ -413,6 +421,7 @@ for i in range(st.session_state[f'num_serv_{tipo}']):
         est = st.selectbox(f"E{i}", list(mapping_estados.keys()), key=f"e_{i}_{tipo}", label_visibility="collapsed")
     with c2:
         if tipo == "spi_breb": cur_list = LISTA_BANCOS_BREB
+        elif tipo == "banco": cur_list = LISTA_SERVICIOS_GRAL
         elif tipo == "masivo": cur_list = LISTA_MASIVO
         elif tipo == "pse": cur_list = LISTA_SERVICIOS_GRAL
         else: cur_list = LISTA_SERVICIOS_GRAL
