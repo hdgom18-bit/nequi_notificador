@@ -189,7 +189,7 @@ LISTA_SERVICIOS_GRAL = [
     "Servicios hogar y paquetes", "Entretenimiento", "Transportes recargas",
     "Donaciones", "Servicios Publicos", "Seguridad y Salud", "Recaudos Masivos",
     "Paquetes y recargas celular", "Ventas por catalogo", "Financiero",
-    "Envio Bancolombia a Nequi", "Recarga PSE",
+    "Envio Bancolombia a Nequi", "Recargas PSE",
     "Recargas Nequi desde otros Bancos (Deshabilitado)",
     "Recibir por Transfiya (Deshabilitado)", "Pago de nomina",
     "Recargas CB Bancolombia", "Recarga CB Nequi Punto Red", "Recarga CB Nequi PTM",
@@ -231,6 +231,8 @@ LISTA_MASIVO = [
 ]
 
 LISTA_BANCOS_BREB = [
+    "Envío Bre-B",
+    "Recepción Bre-B",
     "Envío Bre-B (BANCO DE BOGOTA)",
     "Recepción Bre-B (BANCO DE BOGOTA)",
     "Envío Bre-B (BANCO POPULAR)",
@@ -576,7 +578,9 @@ if st.sidebar.button("Cargar Plantilla PSE"):
     st.session_state[f'num_serv_{t}'] = 2
     # Usar índices de LISTA_SERVICIOS_GRAL
     st.session_state[f's_list_0_{t}'] = "Pagos PSE"
-    st.session_state[f's_list_1_{t}'] = "Recarga PSE"
+    st.session_state[f's_list_1_{t}'] = "Recargas PSE"
+    st.session_state[f'e_0_{t}'] = "❌"
+    st.session_state[f'e_1_{t}'] = "❌"
     st.session_state[f'imp_in_{t}'] = "Usuarios presentan problemas para realizar transacciones a través del servicio PSE."
     st.session_state[f'fun_in_{t}'] = FUNCIONALIDADES_BASE
     st.session_state[f'fun_base_{t}'] = FUNCIONALIDADES_BASE
@@ -599,8 +603,8 @@ if st.sidebar.button("Cargar Plantilla Banco"):
 if st.sidebar.button("Cargar Plantilla SPI BreB"):
     t = "spi_breb"; st.session_state.lista_tipo = t
     st.session_state[f'num_serv_{t}'] = 2
-    st.session_state[f's_list_0_{t}'] = "Envío Bre-B"
-    st.session_state[f's_list_1_{t}'] = "Recepción Bre-B"
+    st.session_state[f's_list_0_{t}'] = LISTA_BANCOS_BREB[0]
+    st.session_state[f's_list_1_{t}'] = LISTA_BANCOS_BREB[1]
     st.session_state[f'imp_in_{t}'] = "Se registra afectación en el servicio de Transacciones SPI BreB para P2P – P2M."
     st.session_state[f'fun_in_{t}'] = FUNCIONALIDADES_BASE
     st.session_state[f'fun_base_{t}'] = FUNCIONALIDADES_BASE
@@ -706,14 +710,14 @@ if base_fun and base_fun != "N/A":
         estado = st.session_state.get(f"e_{i}_{tipo}")
         serv_nombre = st.session_state.get(f"s_list_{i}_{tipo}", "").strip()
         if estado in ["❌", "⚠️"] and serv_nombre:
-            # Intentar eliminar con coma al final, con coma al inicio, o solo el nombre
-            for patron in [f"{serv_nombre}, ", f", {serv_nombre}", serv_nombre]:
+            for patron in [serv_nombre + ", ", ", " + serv_nombre, serv_nombre]:
                 if patron in lista_actual:
                     lista_actual = lista_actual.replace(patron, "", 1)
                     break
-    # Limpiar espacios y comas residuales
-    lista_actual = re.sub(r',[[:space:]]*,', ',', lista_actual)
-    lista_actual = lista_actual.strip().strip(',').strip()
+    # Limpiar comas y espacios residuales
+    while ",," in lista_actual:
+        lista_actual = lista_actual.replace(",,", ",")
+    lista_actual = lista_actual.strip().strip(",").strip()
     st.session_state[f'fun_in_{tipo}'] = lista_actual
 
 st.text_area("Impacto A Usuarios", key=f"imp_in_{tipo}")
