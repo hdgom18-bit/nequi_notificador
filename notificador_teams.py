@@ -439,10 +439,25 @@ for i in range(st.session_state[f'num_serv_{tipo}']):
     with c6:
         if st.button("🗑️", key=f"del_serv_{i}_{tipo}", help=f"Eliminar servicio {i+1}"):
             n = st.session_state[f'num_serv_{tipo}']
-            for j in range(i, n - 1):
-                for campo in ['e', 's_list', 'i', 'f']:
-                    st.session_state[f'{campo}_{j}_{tipo}'] = st.session_state.get(f'{campo}_{j+1}_{tipo}', '')
-            st.session_state[f'num_serv_{tipo}'] = max(1, n - 1)
+            # Guardar valores actuales en listas temporales
+            estados = [st.session_state.get(f"e_{j}_{tipo}", "✅") for j in range(n)]
+            servicios = [st.session_state.get(f"s_list_{j}_{tipo}", "") for j in range(n)]
+            horas_i = [st.session_state.get(f"i_{j}_{tipo}", "") for j in range(n)]
+            horas_f = [st.session_state.get(f"f_{j}_{tipo}", "") for j in range(n)]
+            # Eliminar el índice i
+            estados.pop(i); servicios.pop(i); horas_i.pop(i); horas_f.pop(i)
+            # Limpiar todas las keys actuales
+            for j in range(n):
+                for k in [f"e_{j}_{tipo}", f"s_list_{j}_{tipo}", f"i_{j}_{tipo}", f"f_{j}_{tipo}"]:
+                    if k in st.session_state: del st.session_state[k]
+            # Reasignar con nueva lista
+            nuevo_n = max(1, n - 1)
+            for j in range(nuevo_n):
+                st.session_state[f"e_{j}_{tipo}"] = estados[j]
+                st.session_state[f"s_list_{j}_{tipo}"] = servicios[j]
+                st.session_state[f"i_{j}_{tipo}"] = horas_i[j]
+                st.session_state[f"f_{j}_{tipo}"] = horas_f[j]
+            st.session_state[f'num_serv_{tipo}'] = nuevo_n
             st.rerun()
 
 ### --- 5. CAMPOS TÉCNICOS ---
@@ -484,9 +499,17 @@ for i in range(st.session_state[f'num_av_{tipo}']):
         st.write("")
         if st.button("🗑️", key=f"del_av_{i}_{tipo}", help=f"Eliminar avance {i+1}"):
             n = st.session_state[f'num_av_{tipo}']
-            for j in range(i, n - 1):
-                st.session_state[f'av_{j}_{tipo}'] = st.session_state.get(f'av_{j+1}_{tipo}', '')
-            st.session_state[f'num_av_{tipo}'] = max(1, n - 1)
+            # Guardar en lista temporal
+            avances = [st.session_state.get(f"av_{j}_{tipo}", "") for j in range(n)]
+            avances.pop(i)
+            # Limpiar keys actuales
+            for j in range(n):
+                if f"av_{j}_{tipo}" in st.session_state: del st.session_state[f"av_{j}_{tipo}"]
+            # Reasignar
+            nuevo_n = max(1, n - 1)
+            for j in range(nuevo_n):
+                st.session_state[f"av_{j}_{tipo}"] = avances[j]
+            st.session_state[f'num_av_{tipo}'] = nuevo_n
             st.rerun()
 
 check_sol = st.checkbox("✅ ¿Incluir Solución Final?", key=f"check_sol_{tipo}")
