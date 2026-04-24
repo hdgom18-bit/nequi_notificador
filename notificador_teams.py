@@ -189,7 +189,7 @@ LISTA_SERVICIOS_GRAL = [
     "Servicios hogar y paquetes", "Entretenimiento", "Transportes recargas",
     "Donaciones", "Servicios Publicos", "Seguridad y Salud", "Recaudos Masivos",
     "Paquetes y recargas celular", "Ventas por catalogo", "Financiero",
-    "Envio Bancolombia a Nequi", "Recargas PSE",
+    "Envio Bancolombia a Nequi", "Recarga PSE",
     "Recargas Nequi desde otros Bancos (Deshabilitado)",
     "Recibir por Transfiya (Deshabilitado)", "Pago de nomina",
     "Recargas CB Bancolombia", "Recarga CB Nequi Punto Red", "Recarga CB Nequi PTM",
@@ -224,15 +224,13 @@ LISTA_MASIVO = [
     "Envio a otros Bancos", "Generación de OTP Retiros", "Retiros Cajeros ATM",
     "Envio Bre-B", "Recepcion Bre-B", "Tarjeta Física", "Tarjeta Digital",
     "Recargas CB Bancolombia", "Retiros CB Bancolombia", "Recargas CB Nequi",
-    "Retiros CB Nequi", "Pagos PSE", "Recargas PSE", "Apis", "Pagos de Creditos",
+    "Retiros CB Nequi", "Pagos PSE", "Recarga PSE", "Apis", "Pagos de Creditos",
     "Pay Pal", "Remesas",
     "Servicios Armario - Recargas y Paquetes (operador Tigo)",
     "Servicios Armario - Recargas y Paquetes (operador Claro)", "Vinculación"
 ]
 
 LISTA_BANCOS_BREB = [
-    "Envío Bre-B",
-    "Recepción Bre-B",
     "Envío Bre-B (BANCO DE BOGOTA)",
     "Recepción Bre-B (BANCO DE BOGOTA)",
     "Envío Bre-B (BANCO POPULAR)",
@@ -491,7 +489,7 @@ LISTA_BANCOS_BREB = [
     "Recepción Bre-B (NEQUI)"
 ]
 
-LISTA_PSE = ["Pagos PSE", "Recargas PSE"]
+LISTA_PSE = ["Pagos PSE", "Recarga PSE"]
 mapping_estados = {"✅": "OK", "❌": "TOTAL", "⚠️": "PARCIAL"}
 
 ### --- 2. INICIALIZACIÓN DE ESTADOS ---
@@ -578,7 +576,7 @@ if st.sidebar.button("Cargar Plantilla PSE"):
     st.session_state[f'num_serv_{t}'] = 2
     # Usar índices de LISTA_SERVICIOS_GRAL
     st.session_state[f's_list_0_{t}'] = "Pagos PSE"
-    st.session_state[f's_list_1_{t}'] = "Recargas PSE"
+    st.session_state[f's_list_1_{t}'] = "Recarga PSE"
     st.session_state[f'e_0_{t}'] = "❌"
     st.session_state[f'e_1_{t}'] = "❌"
     st.session_state[f'imp_in_{t}'] = "Usuarios presentan problemas para realizar transacciones a través del servicio PSE."
@@ -721,7 +719,10 @@ if base_fun and base_fun != "N/A":
     st.session_state[f'fun_in_{tipo}'] = lista_actual
 
 st.text_area("Impacto A Usuarios", key=f"imp_in_{tipo}")
-st.text_area("Funcionalidades OK", key=f"fun_in_{tipo}")
+# Funcionalidades OK usa value= para mostrar el valor calculado dinámicamente
+fun_val = st.session_state.get(f'fun_in_{tipo}', "")
+nuevo_fun = st.text_area("Funcionalidades OK", value=fun_val, key=f"fun_display_{tipo}")
+st.session_state[f'fun_in_{tipo}'] = nuevo_fun
 st.text_area("Descripción de la falla", key=f"des_in_{tipo}")
 col_j, col_c = st.columns(2)
 with col_j: st.text_input("Jira", key=f"jira_in_{tipo}")
@@ -793,7 +794,7 @@ if st.button("🚀 DESPLEGAR NOTIFICACIÓN A TEAMS", type="primary", use_contain
         f"#### Servicios Afectados:\n{tabla}\n\n"
         f"****\n\n"
         f"**Impacto A Usuarios:** {st.session_state[f'imp_in_{tipo}']}\n\n"
-        f"**Funcionalidades OK:** {st.session_state[f'fun_in_{tipo}']}\n\n"
+        f"**Funcionalidades OK:** {st.session_state.get(f'fun_in_{tipo}', '')}\n\n"
         f"**Descripción de la falla:** {st.session_state[f'des_in_{tipo}']}\n\n"
         f"**Jira:** {st.session_state[f'jira_in_{tipo}']}\n\n"
         f"**Caso Aliado / Incidente Banco:** {st.session_state[f'caso_in_{tipo}']}\n\n"
