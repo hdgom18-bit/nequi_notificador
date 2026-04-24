@@ -411,12 +411,14 @@ with c_rem:
     if st.button("➖ Quitar"):
         st.session_state[f'num_serv_{tipo}'] = max(1, st.session_state[f'num_serv_{tipo}'] - 1); st.rerun()
 
-col_widths = [0.6, 3.0, 1.2, 1.5, 1.2]
-h1, h2, h3, h4, h5 = st.columns(col_widths)
-h1.write("**ESTADO**"); h2.write("**SERVICIO**"); h3.write("**AFECTACIÓN**"); h4.write("**INICIO**"); h5.write("**FIN**")
+col_widths = [0.5, 3.0, 1.2, 1.5, 1.2, 0.4]
+h1, h2, h3, h4, h5, h6 = st.columns(col_widths)
+h1.write("**ESTADO**"); h2.write("**SERVICIO**"); h3.write("**AFECTACIÓN**")
+h4.write("**INICIO**"); h5.write("**FIN**"); h6.write("🗑️")
 
 for i in range(st.session_state[f'num_serv_{tipo}']):
-    c1, c2, c3, c4, c5 = st.columns(col_widths)
+    col_widths_ext = [0.5, 3.0, 1.2, 1.5, 1.2, 0.4]
+    c1, c2, c3, c4, c5, c6 = st.columns(col_widths_ext)
     with c1:
         est = st.selectbox(f"E{i}", list(mapping_estados.keys()), key=f"e_{i}_{tipo}", label_visibility="collapsed")
     with c2:
@@ -434,6 +436,14 @@ for i in range(st.session_state[f'num_serv_{tipo}']):
         st.text_input(f"I{i}", value=st.session_state.get(f"i_{i}_{tipo}", st.session_state[f'h_ref_ini_{tipo}']), key=f"i_{i}_{tipo}", label_visibility="collapsed")
     with c5:
         st.text_input(f"F{i}", value=st.session_state.get(f"f_{i}_{tipo}", st.session_state[f'h_ref_fin_{tipo}']), key=f"f_{i}_{tipo}", label_visibility="collapsed")
+    with c6:
+        if st.button("🗑️", key=f"del_serv_{i}_{tipo}", help=f"Eliminar servicio {i+1}"):
+            n = st.session_state[f'num_serv_{tipo}']
+            for j in range(i, n - 1):
+                for campo in ['e', 's_list', 'i', 'f']:
+                    st.session_state[f'{campo}_{j}_{tipo}'] = st.session_state.get(f'{campo}_{j+1}_{tipo}', '')
+            st.session_state[f'num_serv_{tipo}'] = max(1, n - 1)
+            st.rerun()
 
 ### --- 5. CAMPOS TÉCNICOS ---
 st.divider()
@@ -466,7 +476,18 @@ st.subheader("Seguimiento:")
 if st.button("➕ Nuevo Avance"):
     st.session_state[f'num_av_{tipo}'] += 1; st.rerun()
 for i in range(st.session_state[f'num_av_{tipo}']):
-    st.text_area(f"Avance {i+1}", key=f"av_{i}_{tipo}")
+    col_av, col_del = st.columns([11, 1])
+    with col_av:
+        st.text_area(f"Avance {i+1}", key=f"av_{i}_{tipo}")
+    with col_del:
+        st.write("")
+        st.write("")
+        if st.button("🗑️", key=f"del_av_{i}_{tipo}", help=f"Eliminar avance {i+1}"):
+            n = st.session_state[f'num_av_{tipo}']
+            for j in range(i, n - 1):
+                st.session_state[f'av_{j}_{tipo}'] = st.session_state.get(f'av_{j+1}_{tipo}', '')
+            st.session_state[f'num_av_{tipo}'] = max(1, n - 1)
+            st.rerun()
 
 check_sol = st.checkbox("✅ ¿Incluir Solución Final?", key=f"check_sol_{tipo}")
 if check_sol:
